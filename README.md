@@ -73,7 +73,7 @@ class GeminiHandler:
 
     def request_gpt(self, system_prompt, user_prompt, ...):
         params = {
-            "model": "gemini-2.5-pro-thinking", # 默认模型，可根据需要修改
+            "model": "gemini-2.5-pro-thinking", # 推荐使用 Gemini 3.1 Pro 或最新 Gemini pro、flash系列
             "temperature": 0,                   # 建议设为 0，确保输出稳定
             ...
         }
