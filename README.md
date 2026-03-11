@@ -1,87 +1,97 @@
-```markdown
+
 # 专家访谈转录纪要助手
 
-这个仓库包含两个 Python 脚本，用于把「专家访谈 / 专家讲解」的录音转写文本（如阿里听悟、飞书转录导出的 txt/docx）自动切分、抽取，并生成结构化纪要，再同时输出一份 Markdown 纪要和一份由该 Markdown 渲染生成的 Word（docx）文档。
+本仓库包含两个 Python 脚本，用于将「专家访谈 / 专家讲解」的录音转写文本（如阿里听悟、飞书导出的 `.txt` 或 `.docx`）自动切分、抽取，并生成结构化纪要。系统会同时输出一份 **Markdown 纪要** 和一份对应的 **Word (docx) 文档**。
 
-## 适用场景
+## 🎯 适用场景
 
-- 只适合 **1 名专家主讲** 的访谈/分享场景：有一个主讲专家，其他人主要是提问或互动。  
-- 典型用法：专家访谈、培训录音、咨询项目访谈、内部分享会等。
+- **核心场景**：仅限 **1 名专家主讲** 的访谈/分享（如专家访谈、培训录音、咨询项目访谈等）。
+- **交互模式**：一名主讲专家 + 其他人的辅助提问或互动。
+- **局限性**：不适合多人自由讨论、无明显主讲人的会议场景。
 
-## 仓库内的两个脚本
+## 📂 脚本版本说明
 
-- `专家call 纪要 V1 书面prompt 202603039`：在保证信息完整的前提下，做**适度书面化**，会略微修改句子，使纪要更像正式文稿。  
-- `专家call 纪要 V1 口语prompt 202603039`：尽量**保持原话风格**，只做去噪、删口头禅，不做明显改写，更接近说话现场。
+仓库内提供两个脚本，其处理逻辑一致，仅在输出文风上有差异：
 
-两份脚本的整体流程和数据结构是一致的，主要差异只在于 prompt 设计和输出文风。
+1. **`专家call 纪要 V1 书面prompt 202603039.py`**：
+   对原始口语进行**适度书面化**改写，修饰病句，使结果更像一份正式的访谈纪要或研究报告。
+2. **`专家call 纪要 V1 口语prompt 202603039.py`**：
+   **保持原话风格**，仅去除冗余口头禅和噪音，最大程度还原专家的表达习惯和现场感。
 
-## 核心功能
+## 🚀 核心功能
 
-- 支持导入阿里听悟、飞书等工具导出的 txt 或 docx 转录文件。  
-- 自动按时间戳解析原始转录文本，切成带开始时间、结束时间和主题的语义片段。  
-- 利用大模型（通过 OpenAI 接口）对每个片段生成结构化纪要，并最终合并为一份 Markdown 纪要，同时基于这份 Markdown 生成对齐格式的 Word（docx）文档。  
-- 内置并发处理逻辑，可以并行处理多个片段，加快长录音的处理速度。
+- **多格式兼容**：支持 `.txt` 和 `.docx` 转录文件。
+- **智能切分**：按时间戳解析文本，自动切分为带有主题的语义片段。
+- **并发处理**：内置并行处理逻辑，可同时调用多个 AI 请求，大幅缩短长文处理时间。
+- **一键双出**：自动生成结构清晰的 Markdown 并在本地渲染成带格式的 Word 文档。
 
-## 使用前必填配置
+## 📦 环境准备
 
-在脚本中找到如下配置区，按自己的环境修改路径和参数（Windows 路径注意使用 `r"..."` 原始字符串或双反斜杠）：
+在 IDE 中运行脚本前，请确保已安装 Python，并在 IDE 的终端（Terminal）执行以下命令安装必要的第三方库：
 
-```python
-# 配置文件路径 - 支持 .txt / .docx 文件，也支持文件夹批量处理
-TRANSCRIPT_PATH = r"E:\\call summarizer\\transcript\\Interview recording 183.txt"  # 可以是文件或文件夹
-OUTPUT_DIR = Path(r"E:\\call summarizer\\output")  # 输出文件夹
-
-# 可指定目标说话人（留空则使用 AI 自动识别的专家）
-TARGET_SPEAKER = ""  # 例如: "说话人 2" 或留空 ""
+```text
+pip install openai python-docx
 ```
 
-在 `GeminiHandler` 中配置自己的 API Key、Base URL 和模型名称：
+*(注：json, re, pathlib 等为 Python 自带标准库，无需额外安装)*
+
+## ⚙️ 使用前配置
+
+请打开脚本，在 `配置区` 修改以下参数：
+
+### 1. 路径与目标设置
+
+这里决定了脚本读取哪些文件以及结果保存在哪里。
+
+```python
+# --- 【输入地址】 ---
+# 1. 处理单个文件：填入完整路径，必须带后缀，例如 r"E:\test\183.txt"
+# 2. 处理整个文件夹：填入文件夹路径，脚本会自动处理该目录下所有的 .txt 和 .docx 文件
+TRANSCRIPT_PATH = r"E:\call summarizer\transcript\Interview_recording.txt" 
+
+# --- 【输出地址】 ---
+# 处理完成后的 Markdown 纪要和 Word 文档将自动存放在此文件夹内
+OUTPUT_DIR = Path(r"E:\call summarizer\output")
+
+# --- 【目标说话人】 ---
+# 如果你知道专家的说话人编号（如 "说话人 2"），请填写；
+# 如果留空 ""，则由 AI 自动识别文本中的核心专家。
+TARGET_SPEAKER = "" 
+```
+
+### 2. 模型与 API 配置
+
+在脚本的 `GeminiHandler` 类中配置你的 API Key 和地址：
 
 ```python
 class GeminiHandler:
     def __init__(self):
         self.client = OpenAI(
-            api_key="YOUR_API_KEY",
-            base_url="YOUR_BASE_URL"
+            api_key="你的_API_KEY",        # 必填：你的 API Key
+            base_url="你的_BASE_URL"       # 必填：OpenAI 兼容的中转地址或官方地址
         )
 
-    def request_gpt(self, system_prompt, user_prompt, output_type="text", temperature=0, max_retries=3):
-        for attempt in range(max_retries):
-            try:
-                params = {
-                    "model": "gemini-2.5-pro-thinking",  # 如需更换模型，在此修改
-                    "temperature": temperature,
-                    "messages": msg,
-                    "stream": True
-                }
-                ...
+    def request_gpt(self, system_prompt, user_prompt, ...):
+        params = {
+            "model": "gemini-2.5-pro-thinking", # 默认模型，可根据需要修改
+            "temperature": 0,                   # 建议设为 0，确保输出稳定
+            ...
+        }
 ```
 
-- `api_key`：填入你自己的 API Key。  
-- `base_url`：填入你自己使用的 OpenAI 兼容服务地址。  
-- `model`：默认为 `"gemini-2.5-pro-thinking"`，如需更换模型，在这里替换即可。  
-- `temperature`：脚本里默认是 `0`，更偏向稳定、可控输出。这个场景一般不需要模型「自由发挥」，有需要可以自行调整。
+## 🛠️ 运行方式 (推荐使用 IDE)
 
-## 运行方式与输入输出
+建议直接在现代 IDE 中打开并运行脚本，这样可以直观地看到处理进度和输出反馈：
 
-1. 按上面的说明配置好 `TRANSCRIPT_PATH`、`OUTPUT_DIR`、`TARGET_SPEAKER` 和 `GeminiHandler` 中的 API 参数。  
-2. 直接用 Python 运行其中一个脚本，例如：  
+1. **推荐 IDE**：**Trae**、**Cursor**、**VS Code** 或 **PyCharm**。
+2. **操作步骤**：
+   - 在 IDE 中打开本仓库文件夹。
+   - 打开对应的 `.py` 脚本文件。
+   - 点击编辑器右上角的 **“运行 (Run)”** 按钮（通常是一个播放键图标）。
+   - 在 IDE 下方的控制台查看实时生成的纪要片段。
 
-   ```bash
-   python Zhuan-Jia-call-Ji-Yao-V1-Shu-Mian-prompt-202603039.py
-   ```
+## 💡 注意事项
 
-3. 运行完成后，在 `OUTPUT_DIR` 指定的文件夹下会生成两类文件：  
-   - `xxx_memo.md`：按主题结构化后的 Markdown 纪要  
-   - `xxx_memo.docx`：基于 Markdown 自动排版生成的 Word 纪要（支持标题、项目符号等格式）
-
-## 专家说话人选择
-
-- 如果你知道专家在转录系统里的说话人编号（例如「说话人 2」），可以在代码中的 `TARGET_SPEAKER` 参数手动填写。  
-- 如果 `TARGET_SPEAKER` 留空，脚本会调用大模型自动识别核心受访专家，并以该说话人视角生成纪要。
-
-## 注意事项
-
-- 当前脚本为个人效率工具 Demo，未做完备的异常处理和参数校验，建议在小范围内部使用后再集成到正式流程。  
-- 不适合「多人自由讨论」「没有明显专家主讲人」的会议场景，这类场景建议单独设计分段逻辑和 prompt。  
-```
+- **专家识别**：若 `TARGET_SPEAKER` 为空，脚本会让 AI 判断谁是核心受访人。
+- **异常处理**：当前为效率工具 Demo 级别，建议在处理重要任务前先用短文本测试。
+- **路径书写**：Windows 用户在填写路径时，请务必在字符串前加 `r`（如 `r"C:\Users\"`），防止反斜杠转义导致报错。
